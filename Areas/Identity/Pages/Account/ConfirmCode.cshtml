@@ -1,0 +1,51 @@
+﻿
+@page
+@model Web.Areas.Identity.Pages.Account.ConfirmCodeModel
+@{
+    ViewData["Title"] = "Xác nhận mã";
+}
+
+<h1>Xác nhận mã</h1>
+<p>Vui lòng nhập mã xác nhận đã được gửi đến email <strong>@Model.Input.Email</strong></p>
+
+<form method="post">
+    <div asp-validation-summary="All" class="text-danger"></div>
+    <input asp-for="Input.Email" type="hidden" />
+    <input asp-for="Input.ReturnUrl" type="hidden" />
+    <div class="form-group">
+        <label asp-for="Input.Code">Mã xác nhận</label>
+        <input asp-for="Input.Code" class="form-control" />
+        <span asp-validation-for="Input.Code" class="text-danger"></span>
+    </div>
+    <form method="post" asp-page-handler="ResendCode">
+        <input asp-for="Input.Email" type="hidden" />
+        <input asp-for="Input.ReturnUrl" type="hidden" />
+        <button type="submit" class="btn btn-link">Gửi lại mã</button>
+    </form>
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">@TempData["Message"]</div>
+    }
+    <button type="submit" class="btn btn-primary">Xác nhận</button>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        // Đảm bảo DOM đã tải trước khi thêm event listener
+        document.addEventListener('DOMContentLoaded', function() {
+            var form = document.getElementById('confirmForm');
+            var button = document.getElementById('submitButton');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    console.log('Form submitted with code: ', document.getElementById('Input_Code').value);
+                });
+            }
+            if (button) {
+                button.addEventListener('click', function(e) {
+                    console.log('Button clicked');
+                });
+            }
+        });
+    </script>
+}
