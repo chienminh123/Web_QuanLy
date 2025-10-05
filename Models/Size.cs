@@ -9,11 +9,14 @@ namespace Web.Models
         [Key]
         public int MaSize { get; set; }
         [Required]
+        public int MaSanPham { get; set; }
+        [Required]
         public string TenSize { get; set; }
         [Required]
         public int SoLuongTon { get; set; }
-        [Required]
+       
         [ForeignKey("MaSanPham")]
-        public SanPham SanPham { get; set; }
+        
+        public SanPham? SanPham { get; set; }
     }
 }

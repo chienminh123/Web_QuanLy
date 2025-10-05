@@ -11,7 +11,8 @@ namespace Web.Repositories
         Task AddAdminRoleAsync(string email);
         Task<List<User>> GetAllAdminsAsync();
         Task RemoveAdminRoleAsync(string email);
-        Task<bool> AddProduct(AddProduct model);
+        //Task<bool> AddProduct(AddProduct model);
         Task<List<TheLoai>> GetTheLoais();
+        Task<bool> AddProductAsync(AddProduct model, IWebHostEnvironment environment);
     }
 }

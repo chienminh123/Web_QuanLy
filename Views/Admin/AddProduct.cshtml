@@ -1,8 +1,10 @@
-﻿@model Web.Models.SanPham
+﻿@model Web.Models.AddProduct
+@using Web.Models
 
 @{
-    ViewData["Title"] = "Add Product";
+    ViewData["Title"] = "Thêm Sản Phẩm";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
+    <script src="~/js/site.js"></script>
 }
 
 <h3>Thêm sản phẩm mới</h3>
@@ -11,116 +13,68 @@
     <div class="text-danger">@ViewBag.Error</div>
 }
 <form id="productForm" asp-controller="Admin" asp-action="AddProduct" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="All" class="text-danger"></div>
     <table class="ProductTable">
         <tr>
             <th>Tên sản phẩm</th>
             <th>Thể loại</th>
             <th>Giá gốc</th>
-            <th>Loại size</th>
             <th>Size và số lượng</th>
             <th>Mô tả</th>
         </tr>
         <tr>
             <td>
-                <input type="text" asp-for="TenSanPham" name="sp.TenSanPham" placeholder="Nhập tên sản phẩm" required />
+                <input type="text" asp-for="TenSanPham" placeholder="Nhập tên sản phẩm" required />
                 <span asp-validation-for="TenSanPham" class="text-danger"></span>
             </td>
             <td>
-                <select name="tl.TenTheLoai" id="categorySelect" onchange="handleCategoryChange()" required>
+                <select id="categorySelect" onchange="handleCategoryChange()" required>
                     <option value="">Chọn thể loại</option>
-                    @foreach (var theloai in ViewBag.TheLoais ?? new List<Web.Models.TheLoai>())
+                    @foreach (var theloai in ViewBag.TheLoais ?? new List<TheLoai>())
                     {
                         <option value="@theloai.TenTheLoai">@theloai.TenTheLoai</option>
                     }
                     <option value="Thêm Thể loại">Thêm Thể loại</option>
                 </select>
                 <div id="newCategoryInput" style="display: none; margin-top: 5px">
-                    <input type="text" id="categoryInput" name="tl.TenTheLoai" placeholder="Nhập thể loại mới" />
+                    <input type="text" id="categoryInput" placeholder="Nhập thể loại mới" />
                     <button type="button" onclick="addNewCategory()">Thêm</button>
                 </div>
-                @if (ViewData.ModelState.ContainsKey("tl.TenTheLoai") && ViewData.ModelState["tl.TenTheLoai"].Errors.Any())
-                {
-                    <span class="text-danger">@ViewData.ModelState["tl.TenTheLoai"].Errors.First().ErrorMessage</span>
-                }
+                <input type="hidden" asp-for="TenTheLoai" id="hiddenCategory" />
+                <span asp-validation-for="TenTheLoai" class="text-danger"></span>
             </td>
             <td>
-                <input type="number" asp-for="Gia" name="sp.Gia" min="0" step="0.01" placeholder="Nhập giá" required />
+                <input type="number" asp-for="Gia" min="0" step="0.01" placeholder="Nhập giá" required />
                 <span asp-validation-for="Gia" class="text-danger"></span>
             </td>
+
             <td>
-                <select id="sizeType" onchange="toggleSizeType()">
-                    <option value="Quần áo">Quần áo</option>
-                    <option value="Giày">Giày</option>
-                </select>
-            </td>
-            <td>
-                <div class="size-container" id="clothingSizes">
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[0].TenSize" value="S" onclick="toggleQuantityInput(this)" />
-                        <label>S</label>
-                        <input type="number" class="quantity-input" name="Sizes[0].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[0].LoaiSize" value="Quần áo" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[1].TenSize" value="M" onclick="toggleQuantityInput(this)" />
-                        <label>M</label>
-                        <input type="number" class="quantity-input" name="Sizes[1].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[1].LoaiSize" value="Quần áo" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[2].TenSize" value="L" onclick="toggleQuantityInput(this)" />
-                        <label>L</label>
-                        <input type="number" class="quantity-input" name="Sizes[2].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[2].LoaiSize" value="Quần áo" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[3].TenSize" value="XL" onclick="toggleQuantityInput(this)" />
-                        <label>XL</label>
-                        <input type="number" class="quantity-input" name="Sizes[3].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[3].LoaiSize" value="Quần áo" />
-                    </div>
+              
+                <div class="size-container" id="clothingSizes" style="display: block;">
+                    @for (int i = 0; i < 5; i++)
+                    {
+                        var size = new[] { "S", "M", "L", "XL", "XXL" }[i];
+                        <div class="size-item" data-size="@size">
+                            <label for="size-@size">@size</label>
+                            <input type="hidden" name="Sizes[@i].TenSize" value="@size" />
+                            <input type="number" id="size-@size" name="Sizes[@i].SoLuongTon" min="0" placeholder="SL" value="0" />
+                        </div>
+                    }
                 </div>
                 <div class="size-container" id="shoeSizes" style="display: none;">
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[4].TenSize" value="38" onclick="toggleQuantityInput(this)" />
-                        <label>38</label>
-                        <input type="number" class="quantity-input" name="Sizes[4].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[4].LoaiSize" value="Giày" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[5].TenSize" value="39" onclick="toggleQuantityInput(this)" />
-                        <label>39</label>
-                        <input type="number" class="quantity-input" name="Sizes[5].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[5].LoaiSize" value="Giày" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[6].TenSize" value="40" onclick="toggleQuantityInput(this)" />
-                        <label>40</label>
-                        <input type="number" class="quantity-input" name="Sizes[6].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[6].LoaiSize" value="Giày" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[7].TenSize" value="41" onclick="toggleQuantityInput(this)" />
-                        <label>41</label>
-                        <input type="number" class="quantity-input" name="Sizes[7].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[7].LoaiSize" value="Giày" />
-                    </div>
-                     <div class="size-item">
-                        <input type="checkbox" name="Sizes[8].TenSize" value="42" onclick="toggleQuantityInput(this)" />
-                        <label>42</label>
-                        <input type="number" class="quantity-input" name="Sizes[8].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[8].LoaiSize" value="Giày" />
-                    </div>
-                    <div class="size-item">
-                        <input type="checkbox" name="Sizes[9].TenSize" value="44" onclick="toggleQuantityInput(this)" />
-                        <label>44</label>
-                        <input type="number" class="quantity-input" name="Sizes[9].SoLuongTon" min="0" placeholder="SL" style="display: none;" />
-                        <input type="hidden" name="Sizes[9].LoaiSize" value="Giày" />
-                    </div>
+                    @for (int i = 0; i < 11; i++)
+                    {
+                        var size = new[] { "27", "28", "29", "30", "31", "38", "39", "40", "41", "42", "44" }[i];
+                        <div class="size-item" data-size="@size">
+                            <label for="size-@size">@size</label>
+                            <input type="hidden" name="Sizes[@i].TenSize" value="@size" />
+                            <input type="number" id="size-@size" name="Sizes[@i].SoLuongTon" min="0" placeholder="SL" value="0" />
+                        </div>
+                    }
                 </div>
             </td>
             <td>
-                <textarea asp-for="MoTa" name="sp.MoTa" placeholder="Nhập mô tả" required></textarea>
+                <textarea asp-for="MoTa" placeholder="Nhập mô tả" required></textarea>
                 <span asp-validation-for="MoTa" class="text-danger"></span>
             </td>
         </tr>
@@ -134,48 +88,122 @@
             <th>Hình ảnh 3</th>
         </tr>
         <tr>
-            <td>
-                <input type="file" name="HinhAnhs[0]" accept="image/*" required />
-                <input type="hidden" name="HinhAnhs[0].AnhBia" value="true" />
-            </td>
-            <td>
-                <input type="file" name="HinhAnhs[1]" accept="image/*" />
-                <input type="hidden" name="HinhAnhs[1].AnhBia" value="false" />
-            </td>
-            <td>
-                <input type="file" name="HinhAnhs[2]" accept="image/*" />
-                <input type="hidden" name="HinhAnhs[2].AnhBia" value="false" />
-            </td>
-            <td>
-                <input type="file" name="HinhAnhs[3]" accept="image/*" />
-                <input type="hidden" name="HinhAnhs[3].AnhBia" value="false" />
-            </td>
+            @for (int i = 0; i < 4; i++)
+            {
+                <td>
+                    <input type="file" name="HinhAnhs" accept="image/*" @(i == 0 ? "required" : "") />
+                </td>
+            }
         </tr>
     </table>
     <button type="submit" class="addButton">Thêm sản phẩm</button>
+
+
 </form>
 
+
 @section Scripts {
-    @* <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.3/jquery.validate.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
-    <script src="~/js/site.js"></script> *@
-    <script>
-        function toggleSizeType() {
-            const sizeType = document.getElementById("sizeType").value;
-            document.getElementById("clothingSizes").style.display = sizeType === "Quần áo" ? "block" : "none";
-            document.getElementById("shoeSizes").style.display = sizeType === "Giày" ? "block" : "none";
+    <partial name="_ValidationScriptsPartial" />
+     <script>
+                 function toggleSizeType(categoryName) {
+            const clothingSizes = document.getElementById("clothingSizes");
+            const shoeSizes = document.getElementById("shoeSizes");
+
+            if (categoryName.toLowerCase().includes('giày') || categoryName.toLowerCase().includes('dép')) {
+                clothingSizes.style.display = "none";
+                shoeSizes.style.display = "block";
+                // Vô hiệu hóa các input của clothingSizes
+                Array.from(clothingSizes.querySelectorAll('input')).forEach(input => {
+                    input.disabled = true;
+                });
+                // Kích hoạt các input của shoeSizes
+                Array.from(shoeSizes.querySelectorAll('input')).forEach(input => {
+                    input.disabled = false;
+                });
+            } else {
+                clothingSizes.style.display = "block";
+                shoeSizes.style.display = "none";
+                // Vô hiệu hóa các input của shoeSizes
+                Array.from(shoeSizes.querySelectorAll('input')).forEach(input => {
+                    input.disabled = true;
+                });
+                // Kích hoạt các input của clothingSizes
+                Array.from(clothingSizes.querySelectorAll('input')).forEach(input => {
+                    input.disabled = false;
+                });
+            }
+
+            // Đặt lại số lượng khi chuyển đổi
+            const inputs = document.querySelectorAll('.size-container input[type="number"]');
+            inputs.forEach(input => input.value = '0');
         }
 
-        // Gửi form bằng jQuery để kiểm tra
+        function handleCategoryChange() {
+            const select = document.getElementById("categorySelect");
+            const newInput = document.getElementById("newCategoryInput");
+            const hidden = document.getElementById("hiddenCategory");
+
+            if (select.value === "Thêm Thể loại") {
+                newInput.style.display = 'block';
+                hidden.value = '';
+            } else {
+                newInput.style.display = 'none';
+                document.getElementById("categoryInput").value = '';
+                hidden.value = select.value;
+                toggleSizeType(select.value); // Tự động switch size dựa trên thể loại chọn
+            }
+        }
+
+        function addNewCategory() {
+            const inputValue = document.getElementById("categoryInput").value.trim();
+            if (inputValue) {
+                const hidden = document.getElementById("hiddenCategory");
+                hidden.value = inputValue;
+                document.getElementById("newCategoryInput").style.display = 'none';
+
+                // Thêm thể loại mới vào dropdown và chọn nó
+                const select = document.getElementById("categorySelect");
+                if (!Array.from(select.options).some(option => option.value === inputValue)) {
+                    const newOption = new Option(inputValue, inputValue, false, true);
+                    select.add(newOption);
+                }
+                select.value = inputValue; // Chọn thể loại vừa thêm
+                toggleSizeType(inputValue); // Cập nhật kích thước dựa trên thể loại mới
+            } else {
+                alert("Vui lòng nhập tên thể loại mới!");
+            }
+        }
+
+
         $(document).ready(function () {
             $("#productForm").on("submit", function (e) {
                 console.log("Form submitted");
+                const formData = new FormData(this);
+                console.log("Form Data Keys:", Array.from(formData.keys()));
+                for (let pair of formData.entries()) {
+                    console.log(`${pair[0]}:`, pair[1]);
+                }
+
+                // Kiểm tra file
+                const files = formData.getAll("HinhAnhs");
+                if (files.length === 0) {
+                    console.log("Không có file nào được chọn!");
+                    e.preventDefault(); // Ngăn submit nếu không có file (nếu bắt buộc)
+                    alert("Vui lòng chọn ít nhất một hình ảnh!");
+                } else {
+                    console.log("Số file được chọn:", files.length);
+                }
+
                 if (!$(this).valid()) {
                     e.preventDefault();
-                    console.log("Form validation failed");
+                    console.log("Validation failed");
+                } else {
+                    console.log("Form is valid, submitting...");
                 }
+                Console.ReadLine();
             });
         });
-    </script>
+     </script>
+    
+    
 }

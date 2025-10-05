@@ -11,10 +11,11 @@ namespace Web.Models
         [Required]
         public int MaSanPham { get; set; }
         [Required]
-        public string HinhAnhUrl { get; set; }
+        public string? HinhAnhUrl { get; set; }
         [Required]
         public bool AnhBia { get; set; } = false;
         [ForeignKey("MaSanPham")]
-        public SanPham SanPham { get; set; }
+        
+        public SanPham? SanPham { get; set; }
     }
 }

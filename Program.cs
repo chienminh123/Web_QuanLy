@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using System.Threading.Tasks;
 using Web.Data;
 using Web.Models;
 using Web.NewFolder;
@@ -10,7 +12,7 @@ namespace Web
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +38,13 @@ namespace Web
             builder.Services.AddTransient<IEmailSender, EmailSender>();
             builder.Services.Configure<AuthMessageSenderOptions>(builder.Configuration.GetSection("SendGrid"));
             builder.Services.AddScoped<IAdminRepository, AdminRepo>();
-            
+            // Thêm dịch vụ vào container
+            builder.Services.AddControllersWithViews();
+
+            builder.Services.Configure<FormOptions>(options =>
+            {
+                options.MultipartBodyLengthLimit = 104857600; // 100MB
+            });
             builder.Services.AddControllersWithViews();
             builder.Services.ConfigureApplicationCookie(options =>
             {
@@ -47,19 +55,19 @@ namespace Web
             var app = builder.Build();
 
             // Seed dữ liệu
-            //using (var scope = app.Services.CreateScope())
-            //{
-            //    var services = scope.ServiceProvider;
-            //    try
-            //    {
-            //        await DataSeed.KhoiTaoDL(services);
-            //    }
-            //    catch (Exception ex)
-            //    {
-            //        var logger = services.GetRequiredService<ILogger<Program>>();
-            //        logger.LogError(ex, "Lỗi nghiêm trọng khi seed dữ liệu: {Error}", ex.Message);
-            //    }
-            //}
+            using (var scope = app.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                try
+                {
+                    await DataSeed.KhoiTaoDL(services);
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Lỗi nghiêm trọng khi seed dữ liệu: {Error}", ex.Message);
+                }
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -75,20 +83,20 @@ namespace Web
 
             app.UseHttpsRedirection();
             app.UseStaticFiles();
-
+            
             app.UseRouting();
 
             app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(
-                 name: "admin",
-                 pattern: "admin/{action=Dashboard}/{id?}",
+                 name: "Admin",
+                 pattern: "Admin/{action=Dashboard}/{id?}",
                  defaults: new { controller = "Admin" });
 
             app.MapControllerRoute(
-                name: "adminLogin",
-                pattern: "admin/login",
+                name: "AdminLogin",
+                pattern: "Admin/login",
                 defaults: new { controller = "Admin", action = "AdminLogin" });
 
             // Route mặc định

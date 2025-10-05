@@ -12,8 +12,8 @@ using Web.Data;
 namespace Web.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250909095447_lan2")]
-    partial class lan2
+    [Migration("20251005163327_lan4")]
+    partial class lan4
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

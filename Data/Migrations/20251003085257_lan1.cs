@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Web.Data.Migrations
 {
-    public partial class lan2 : Migration
+    public partial class lan1 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -222,9 +222,9 @@ namespace Web.Data.Migrations
                 {
                     MaSize = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
+                    MaSanPham = table.Column<int>(type: "int", nullable: false),
                     TenSize = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    SoLuongTon = table.Column<int>(type: "int", nullable: false),
-                    MaSanPham = table.Column<int>(type: "int", nullable: false)
+                    SoLuongTon = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {

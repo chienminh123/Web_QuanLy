@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
 using Web.Data;
 using Web.Models;
 using Web.PhanQuyen;
@@ -14,15 +16,21 @@ namespace Web.Controllers
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
         private readonly IAdminRepository _adminRepository;
+        private readonly IWebHostEnvironment _environment; // Để xử lý upload file
+        private readonly ApplicationDbContext _context; // Thêm DbContext để sử dụng trực tiếp nếu cần
 
         public AdminController(
             SignInManager<User> signInManager,
             UserManager<User> userManager,
-            IAdminRepository adminRepository)
+            IAdminRepository adminRepository,
+            IWebHostEnvironment environment,
+            ApplicationDbContext context)
         {
             _signInManager = signInManager;
             _userManager = userManager;
             _adminRepository = adminRepository;
+            _environment = environment;
+            _context = context;
         }
 
         [HttpGet]
@@ -131,5 +139,46 @@ namespace Web.Controllers
         {
             return View();
         }
+
+        
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet]
+        public async Task<IActionResult> AddProduct()
+        {
+            ViewBag.TheLoais = await _adminRepository.GetTheLoais();
+            return View();
+        }
+        [Authorize(Roles = "Admin")]
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AddProduct(AddProduct model)
+        {
+
+            if (ModelState.IsValid)
+            {
+                var success = await _adminRepository.AddProductAsync(model, _environment);
+                if (success)
+                {
+                    Console.WriteLine("Sản phẩm được thêm thành công");
+                    return RedirectToAction("AddProduct");
+                }
+                else
+                {
+                    ModelState.AddModelError("", "Lỗi khi thêm sản phẩm. Vui lòng kiểm tra log để biết chi tiết.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("ModelState is invalid");
+            }
+
+
+            ViewBag.TheLoais = await _adminRepository.GetTheLoais();
+            return View(model);
+        }
+
+
+
     }
 }

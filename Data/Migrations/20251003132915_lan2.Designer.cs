@@ -12,8 +12,8 @@ using Web.Data;
 namespace Web.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250909095212_lan1")]
-    partial class lan1
+    [Migration("20251003132915_lan2")]
+    partial class lan2
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -313,6 +313,9 @@ namespace Web.Data.Migrations
                     b.Property<int>("MaSanPham")
                         .HasColumnType("int");
 
+                    b.Property<int?>("SanPhamMaSanPham")
+                        .HasColumnType("int");
+
                     b.Property<int>("SoLuongTon")
                         .HasColumnType("int");
 
@@ -322,7 +325,7 @@ namespace Web.Data.Migrations
 
                     b.HasKey("MaSize");
 
-                    b.HasIndex("MaSanPham");
+                    b.HasIndex("SanPhamMaSanPham");
 
                     b.ToTable("Size");
                 });
@@ -419,13 +422,9 @@ namespace Web.Data.Migrations
 
             modelBuilder.Entity("Web.Models.Size", b =>
                 {
-                    b.HasOne("Web.Models.SanPham", "SanPham")
+                    b.HasOne("Web.Models.SanPham", null)
                         .WithMany("Sizes")
-                        .HasForeignKey("MaSanPham")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("SanPham");
+                        .HasForeignKey("SanPhamMaSanPham");
                 });
 
             modelBuilder.Entity("Web.Models.SanPham", b =>

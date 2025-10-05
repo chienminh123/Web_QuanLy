@@ -20,7 +20,7 @@ namespace Web.Models
         [ForeignKey("MaTheLoai")]
         public TheLoai TheLoai { get; set; }
         public List<HinhAnh> HinhAnhs { get; set; } = new List<HinhAnh>();
-        public ICollection<Size> Sizes { get; set; }
+        public List<Size> Sizes { get; set; } = new List<Size>();
 
     }
 

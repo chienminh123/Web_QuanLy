@@ -3,6 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Web.Data;
 using Web.Models;
 using Web.PhanQuyen;
+using Web.Data;
+using Web.Models;
+using Web.PhanQuyen;
+using Web.Repositories;
 
 namespace Web.Repositories
 {
@@ -11,14 +15,16 @@ namespace Web.Repositories
         private readonly ApplicationDbContext _context;
         private readonly UserManager<User> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
-
+        private readonly ILogger<AdminRepo> _logger;
         public AdminRepo(ApplicationDbContext context,
                         UserManager<User> userManager,
-                        RoleManager<IdentityRole> roleManager)
+                        RoleManager<IdentityRole> roleManager,
+                        ILogger<AdminRepo> logger)
         {
             _context = context;
             _userManager = userManager;
             _roleManager = roleManager;
+            _logger = logger;
         }
 
         // Các method admin role (mới thêm)
@@ -31,7 +37,7 @@ namespace Web.Repositories
         public bool IsAdmin(User user)
         {
             if (user == null) return false;
-            return _userManager.IsInRoleAsync(user, Roles.Admin.ToString()).Result;
+            return _userManager.IsInRoleAsync(user, Roles.Admin.ToString()).GetAwaiter().GetResult();
         }
 
         public async Task AddAdminRoleAsync(string email)
@@ -55,18 +61,17 @@ namespace Web.Repositories
 
         public async Task<List<User>> GetAllAdminsAsync()
         {
-            var allUsers = _userManager.Users.ToList();
-            var admins = new List<User>();
+            var adminRole = await _roleManager.FindByNameAsync(Roles.Admin.ToString());
+            if (adminRole == null) return new List<User>();
 
-            foreach (var user in allUsers)
-            {
-                if (await IsAdminAsync(user))
-                {
-                    admins.Add(user);
-                }
-            }
+            var adminIds = await _context.UserRoles
+                .Where(ur => ur.RoleId == adminRole.Id)
+                .Select(ur => ur.UserId)
+                .ToListAsync();
 
-            return admins;
+            return await _userManager.Users
+                .Where(u => adminIds.Contains(u.Id))
+                .ToListAsync();
         }
 
         public async Task RemoveAdminRoleAsync(string email)
@@ -77,50 +82,126 @@ namespace Web.Repositories
                 await _userManager.RemoveFromRoleAsync(user, Roles.Admin.ToString());
             }
         }
-
-        // Các method hiện có của bạn (giữ nguyên)
-        public async Task<bool> AddProduct(AddProduct model)
+        public async Task<bool> AddProductAsync(AddProduct model, IWebHostEnvironment environment)
         {
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Kiểm tra TenTheLoai
-                if (string.IsNullOrWhiteSpace(model.TenTheLoaiMoi))
+                _logger.LogInformation("Bắt đầu thêm sản phẩm: {TenSanPham}", model.TenSanPham);
+                if (string.IsNullOrWhiteSpace(model.TenTheLoai))
                 {
-                    Console.WriteLine("TenTheLoai is null or empty");
+                    _logger.LogWarning("TenTheLoai trống, hủy giao dịch.");
                     return false;
                 }
 
-                // Kiểm tra và thêm thể loại nếu chưa tồn tại
-                var existingTheLoai = await _context.TheLoais
-                    .FirstOrDefaultAsync(t => t.TenTheLoai == model.TenTheLoaiMoi);
-                if (existingTheLoai == null)
+                var theLoai = await _context.TheLoais.FirstOrDefaultAsync(t => t.TenTheLoai == model.TenTheLoai);
+                if (theLoai == null)
                 {
-                    existingTheLoai = new TheLoai { TenTheLoai = model.TenTheLoaiMoi };
-                    _context.TheLoais.Add(existingTheLoai);
-                    await _context.SaveChangesAsync(); // Lưu thể loại để lấy MaTheLoai
+                    theLoai = new TheLoai { TenTheLoai = model.TenTheLoai };
+                    _context.TheLoais.Add(theLoai);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Thêm thể loại mới: {TenTheLoai}", model.TenTheLoai);
                 }
 
-                // Thêm sản phẩm
-                var sanpham = new SanPham
+                var sanPham = await _context.SanPhams.FirstOrDefaultAsync(t => t.TenSanPham == model.TenSanPham);
+                if (sanPham == null)
                 {
-                    TenSanPham = model.TenSanPham,
-                    Gia = model.Gia,
-                    MoTa = model.MoTa,
-                    MaTheLoai = existingTheLoai.MaTheLoai
-                };
-                _context.SanPhams.Add(sanpham);
-                await _context.SaveChangesAsync(); // Lưu sản phẩm để lấy MaSanPham
+                    //chưa có kiểm tra tên sp đã nhập r 
+                    sanPham = new SanPham
+                    {
+                        TenSanPham = model.TenSanPham,
+                        Gia = model.Gia,
+                        MoTa = model.MoTa,
+                        MaTheLoai = theLoai.MaTheLoai,
+                        Sizes = new List<Size>(),
+                        HinhAnhs = new List<HinhAnh>()
+                    };
+                    _context.SanPhams.Add(sanPham);
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation("Thêm sản phẩm thành công, MaSanPham: {MaSanPham}", sanPham.MaSanPham);
+                }
+                // Xử lý size
+                if (model.Sizes == null || !model.Sizes.Any(s => !string.IsNullOrEmpty(s.TenSize)))
+                {
+                    _logger.LogWarning("Danh sách size không hợp lệ, hủy giao dịch.");
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+                foreach (var size in model.Sizes)
+                {
+                    if (!string.IsNullOrEmpty(size.TenSize))
+                    {
+                        var newSize = new Size
+                        {
+                            TenSize = size.TenSize,
+                            SoLuongTon = size.SoLuongTon,
+                            MaSanPham = sanPham.MaSanPham
+                        };
+                        _context.Sizes.Add(newSize);
+                        sanPham.Sizes.Add(newSize);
+                    }
+                }
 
-                // Lưu tất cả thay đổi
+                // Xử lý hình ảnh
+                _logger.LogInformation("Số lượng file HinhAnhs: {Count}", model.HinhAnhs?.Count ?? 0);
+                if (model.HinhAnhs != null && model.HinhAnhs.Any(f => f != null && f.Length > 0))
+                {
+                    for (int i = 0; i < model.HinhAnhs.Count; i++)
+                    {
+                        var file = model.HinhAnhs[i];
+                        if (file != null && file.Length > 0)
+                        {
+                            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                            if (extension != ".jpg" && extension != ".jpeg" && extension != ".png")
+                            {
+                                _logger.LogWarning("Định dạng file không hợp lệ: {Extension}", extension);
+                                await transaction.RollbackAsync();
+                                return false;
+                            }
+                            if (file.Length > 5 * 1024 * 1024)
+                            {
+                                _logger.LogWarning("Kích thước file quá lớn: {Length}", file.Length);
+                                await transaction.RollbackAsync();
+                                return false;
+                            }
+                            var uploadsFolder = Path.Combine(environment.WebRootPath, "img/Server");
+                            Directory.CreateDirectory(uploadsFolder);
+                            var uniqueFileName = Guid.NewGuid().ToString() + Path.GetExtension(file.FileName);
+                            var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                            using (var fileStream = new FileStream(filePath, FileMode.Create))
+                            {
+                                await file.CopyToAsync(fileStream);
+                            }
+                            var hinhAnh = new HinhAnh
+                            {
+                                HinhAnhUrl = "/img/Server/" + uniqueFileName,
+                                AnhBia = (i == 0),
+                                MaSanPham = sanPham.MaSanPham
+                            };
+                            _context.HinhAnhs.Add(hinhAnh);
+                            sanPham.HinhAnhs.Add(hinhAnh);
+                            _logger.LogInformation("Đã lưu hình ảnh: {HinhAnhUrl}", hinhAnh.HinhAnhUrl);
+                        }
+                    }
+                }
+                else
+                {
+                    _logger.LogWarning("Không có hình ảnh nào được gửi lên.");
+                }
+
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                _logger.LogInformation("Giao dịch hoàn tất thành công.");
                 return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Lỗi khi thêm sản phẩm: {ex.Message}\nStackTrace: {ex.StackTrace}");
+                _logger.LogError(ex, "Lỗi khi thêm sản phẩm: {Message}", ex.Message);
+                await transaction.RollbackAsync();
                 return false;
             }
         }
+
 
         public async Task<List<TheLoai>> GetTheLoais()
         {
